@@ -1,0 +1,11 @@
+### Salud API
+GET http://localhost:8080/api/salud
+
+### Login base
+POST http://localhost:8080/api/seguridad/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@kaizen.local",
+  "clave": "Admin123*"
+}
