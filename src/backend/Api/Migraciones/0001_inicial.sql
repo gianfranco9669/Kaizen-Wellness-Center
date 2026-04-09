@@ -153,3 +153,141 @@ create table if not exists plataforma.membresias (
     creado_por varchar(80) not null,
     actualizado_por varchar(80) null
 );
+
+create table if not exists plataforma.tokens_recupero_claves (
+    id uuid primary key,
+    usuario_sistema_id uuid not null references plataforma.usuarios(id),
+    token_hash varchar(128) not null unique,
+    expira_utc timestamp not null,
+    usado_utc timestamp null,
+    fecha_creacion_utc timestamp not null,
+    fecha_actualizacion_utc timestamp null,
+    eliminado_logico boolean not null,
+    creado_por varchar(80) not null,
+    actualizado_por varchar(80) null
+);
+
+create table if not exists plataforma.categorias_productos (
+    id uuid primary key,
+    empresa_id uuid not null references plataforma.empresas(id),
+    nombre varchar(120) not null,
+    fecha_creacion_utc timestamp not null,
+    fecha_actualizacion_utc timestamp null,
+    eliminado_logico boolean not null,
+    creado_por varchar(80) not null,
+    actualizado_por varchar(80) null
+);
+
+create table if not exists plataforma.productos_venta (
+    id uuid primary key,
+    empresa_id uuid not null references plataforma.empresas(id),
+    categoria_producto_id uuid not null references plataforma.categorias_productos(id),
+    codigo varchar(40) not null,
+    nombre varchar(140) not null,
+    precio_venta numeric(18,2) not null,
+    costo_teorico numeric(18,2) not null,
+    activo boolean not null,
+    fecha_creacion_utc timestamp not null,
+    fecha_actualizacion_utc timestamp null,
+    eliminado_logico boolean not null,
+    creado_por varchar(80) not null,
+    actualizado_por varchar(80) null
+);
+
+create table if not exists plataforma.pedidos (
+    id uuid primary key,
+    sede_id uuid not null references plataforma.sedes(id),
+    cliente_id uuid not null references plataforma.clientes(id),
+    canal varchar(40) not null,
+    estado varchar(40) not null,
+    total numeric(18,2) not null,
+    observaciones text not null,
+    fecha_creacion_utc timestamp not null,
+    fecha_actualizacion_utc timestamp null,
+    eliminado_logico boolean not null,
+    creado_por varchar(80) not null,
+    actualizado_por varchar(80) null
+);
+
+create table if not exists plataforma.detalle_pedidos (
+    id uuid primary key,
+    pedido_id uuid not null references plataforma.pedidos(id),
+    producto_venta_id uuid not null references plataforma.productos_venta(id),
+    cantidad numeric(18,3) not null,
+    precio_unitario numeric(18,2) not null,
+    fecha_creacion_utc timestamp not null,
+    fecha_actualizacion_utc timestamp null,
+    eliminado_logico boolean not null,
+    creado_por varchar(80) not null,
+    actualizado_por varchar(80) null
+);
+
+create table if not exists plataforma.pagos (
+    id uuid primary key,
+    pedido_id uuid not null references plataforma.pedidos(id),
+    medio_pago varchar(40) not null,
+    importe numeric(18,2) not null,
+    estado varchar(40) not null,
+    fecha_creacion_utc timestamp not null,
+    fecha_actualizacion_utc timestamp null,
+    eliminado_logico boolean not null,
+    creado_por varchar(80) not null,
+    actualizado_por varchar(80) null
+);
+
+create table if not exists plataforma.movimientos_stock (
+    id uuid primary key,
+    sede_id uuid not null references plataforma.sedes(id),
+    producto_venta_id uuid null references plataforma.productos_venta(id),
+    insumo_id uuid null,
+    tipo_movimiento varchar(40) not null,
+    cantidad numeric(18,3) not null,
+    motivo varchar(240) not null,
+    fecha_creacion_utc timestamp not null,
+    fecha_actualizacion_utc timestamp null,
+    eliminado_logico boolean not null,
+    creado_por varchar(80) not null,
+    actualizado_por varchar(80) null
+);
+
+create table if not exists plataforma.mermas (
+    id uuid primary key,
+    sede_id uuid not null references plataforma.sedes(id),
+    producto_venta_id uuid null references plataforma.productos_venta(id),
+    insumo_id uuid null,
+    cantidad numeric(18,3) not null,
+    motivo varchar(240) not null,
+    fecha_creacion_utc timestamp not null,
+    fecha_actualizacion_utc timestamp null,
+    eliminado_logico boolean not null,
+    creado_por varchar(80) not null,
+    actualizado_por varchar(80) null
+);
+
+create table if not exists plataforma.historial_accesos_gimnasio (
+    id uuid primary key,
+    socio_gimnasio_id uuid not null references plataforma.socios_gimnasio(id),
+    fecha_acceso_utc timestamp not null,
+    tipo_acceso varchar(30) not null,
+    resultado varchar(30) not null,
+    fecha_creacion_utc timestamp not null,
+    fecha_actualizacion_utc timestamp null,
+    eliminado_logico boolean not null,
+    creado_por varchar(80) not null,
+    actualizado_por varchar(80) null
+);
+
+create table if not exists plataforma.eventos_webhook_externos (
+    id uuid primary key,
+    proveedor varchar(80) not null,
+    idempotencia_key varchar(80) not null unique,
+    tipo_evento varchar(120) not null,
+    estado_procesamiento varchar(40) not null,
+    cuerpo_json text not null,
+    reintentos int not null,
+    fecha_creacion_utc timestamp not null,
+    fecha_actualizacion_utc timestamp null,
+    eliminado_logico boolean not null,
+    creado_por varchar(80) not null,
+    actualizado_por varchar(80) null
+);

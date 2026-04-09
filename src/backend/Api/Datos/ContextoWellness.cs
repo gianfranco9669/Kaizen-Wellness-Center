@@ -14,6 +14,7 @@ public sealed class ContextoWellness : DbContext
     public DbSet<UsuarioRol> UsuariosRoles => Set<UsuarioRol>();
     public DbSet<RolPermiso> RolesPermisos => Set<RolPermiso>();
     public DbSet<RefreshTokenSesion> RefreshTokensSesiones => Set<RefreshTokenSesion>();
+    public DbSet<TokenRecuperoClave> TokensRecuperoClaves => Set<TokenRecuperoClave>();
     public DbSet<Cliente> Clientes => Set<Cliente>();
     public DbSet<SocioGimnasio> SociosGimnasio => Set<SocioGimnasio>();
     public DbSet<Membresia> Membresias => Set<Membresia>();
@@ -42,6 +43,7 @@ public sealed class ContextoWellness : DbContext
         modelBuilder.Entity<UsuarioRol>().ToTable("usuarios_roles").HasIndex(x => new { x.UsuarioSistemaId, x.RolSistemaId }).IsUnique();
         modelBuilder.Entity<RolPermiso>().ToTable("roles_permisos").HasIndex(x => new { x.RolSistemaId, x.PermisoSistemaId }).IsUnique();
         modelBuilder.Entity<RefreshTokenSesion>().ToTable("refresh_tokens_sesiones").HasIndex(x => x.TokenHash).IsUnique();
+        modelBuilder.Entity<TokenRecuperoClave>().ToTable("tokens_recupero_claves").HasIndex(x => x.TokenHash).IsUnique();
 
         modelBuilder.Entity<Cliente>().ToTable("clientes").HasIndex(x => new { x.EmpresaId, x.Documento });
         modelBuilder.Entity<SocioGimnasio>().ToTable("socios_gimnasio").HasIndex(x => x.NumeroSocio).IsUnique();

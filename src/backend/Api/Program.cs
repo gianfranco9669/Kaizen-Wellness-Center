@@ -5,6 +5,8 @@ using Api.Datos;
 using Api.Hubs;
 using Api.Jobs;
 using Api.Middleware;
+using Api.Modulos.Gastronomia;
+using Api.Modulos.Gimnasio;
 using Api.Seguridad;
 using Api.Servicios;
 using Hangfire;
@@ -23,16 +25,29 @@ if (string.IsNullOrWhiteSpace(opcionesJwt.ClaveSecreta) || opcionesJwt.ClaveSecr
     throw new InvalidOperationException("Jwt:ClaveSecreta debe estar configurada con al menos 32 caracteres");
 }
 
+var qrClaveSecreta = builder.Configuration["Qr:ClaveSecreta"];
+if (string.IsNullOrWhiteSpace(qrClaveSecreta) || qrClaveSecreta.Length < 16)
+{
+    throw new InvalidOperationException("Qr:ClaveSecreta debe estar configurada");
+}
+
+var conexionPostgreSql = builder.Configuration.GetConnectionString("PostgreSql");
+var conexionRedis = builder.Configuration.GetConnectionString("Redis");
+if (string.IsNullOrWhiteSpace(conexionPostgreSql) || string.IsNullOrWhiteSpace(conexionRedis))
+{
+    throw new InvalidOperationException("ConnectionStrings PostgreSql y Redis deben configurarse por variables de entorno o secretos");
+}
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSignalR();
 
 builder.Services.AddDbContext<ContextoWellness>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("PostgreSql")));
+    options.UseNpgsql(conexionPostgreSql));
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
-    ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")!));
+    ConnectionMultiplexer.Connect(conexionRedis));
 
 builder.Services.AddScoped<IServicioAuth, ServicioAuth>();
 builder.Services.AddScoped<IServicioClientes, ServicioClientes>();
@@ -42,6 +57,8 @@ builder.Services.AddScoped<IClienteExternoPedidosYa, ClienteExternoPedidosYa>();
 builder.Services.AddScoped<IClienteExternoRappi, ClienteExternoRappi>();
 builder.Services.AddScoped<IClienteExternoMercadoPago, ClienteExternoMercadoPago>();
 builder.Services.AddScoped<JobSincronizacionIntegraciones>();
+builder.Services.AddScoped<IServicioGastronomia, ServicioGastronomia>();
+builder.Services.AddScoped<IServicioGimnasio, ServicioGimnasio>();
 builder.Services.AddScoped<IServicioProcesadorWebhooks, ServicioProcesadorWebhooks>();
 
 builder.Services.AddHttpClient("pedidosya", c => { var url = builder.Configuration["Integraciones:PedidosYa:BaseUrl"]; if (!string.IsNullOrWhiteSpace(url)) c.BaseAddress = new Uri(url); });
@@ -72,12 +89,12 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddHangfire(config =>
-    config.UsePostgreSqlStorage(c => c.UseNpgsqlConnection(builder.Configuration.GetConnectionString("PostgreSql"))));
+    config.UsePostgreSqlStorage(c => c.UseNpgsqlConnection(conexionPostgreSql)));
 builder.Services.AddHangfireServer();
 
 builder.Services.AddHealthChecks()
-    .AddNpgSql(builder.Configuration.GetConnectionString("PostgreSql")!)
-    .AddRedis(builder.Configuration.GetConnectionString("Redis")!);
+    .AddNpgSql(conexionPostgreSql)
+    .AddRedis(conexionRedis);
 
 builder.Services.AddCors(options =>
 {

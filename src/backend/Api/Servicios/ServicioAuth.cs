@@ -13,6 +13,9 @@ public interface IServicioAuth
     Task<Resultado<AuthResponse>> LoginAsync(LoginRequest request, string? ip, CancellationToken ct);
     Task<Resultado<AuthResponse>> RenovarTokenAsync(string refreshToken, string? ip, CancellationToken ct);
     Task CerrarSesionAsync(string refreshToken, CancellationToken ct);
+    Task RevocarSesionesUsuarioAsync(Guid usuarioId, CancellationToken ct);
+    Task SolicitarRecuperoClaveAsync(string email, CancellationToken ct);
+    Task<bool> ConfirmarRecuperoClaveAsync(string token, string nuevaClave, CancellationToken ct);
 }
 
 public sealed class ServicioAuth : IServicioAuth
@@ -40,14 +43,10 @@ public sealed class ServicioAuth : IServicioAuth
             .FirstOrDefaultAsync(x => x.Email == request.Email, ct);
 
         if (usuario is null || !usuario.Activo)
-        {
             return Resultado<AuthResponse>.Fallo("Credenciales invalidas");
-        }
 
         if (usuario.BloqueadoHastaUtc is not null && usuario.BloqueadoHastaUtc > DateTime.UtcNow)
-        {
             return Resultado<AuthResponse>.Fallo("Usuario bloqueado temporalmente");
-        }
 
         if (!_hash.Verificar(request.Clave, usuario.ClaveHash, usuario.ClaveSalt))
         {
@@ -67,11 +66,7 @@ public sealed class ServicioAuth : IServicioAuth
         usuario.IntentosFallidos = 0;
 
         var roles = usuario.Roles.Select(x => x.RolSistema!.Codigo).Distinct().ToArray();
-        var permisos = usuario.Roles
-            .SelectMany(x => x.RolSistema!.Permisos)
-            .Select(x => x.PermisoSistema!.Codigo)
-            .Distinct()
-            .ToArray();
+        var permisos = usuario.Roles.SelectMany(x => x.RolSistema!.Permisos).Select(x => x.PermisoSistema!.Codigo).Distinct().ToArray();
 
         var accessToken = _tokenJwt.CrearAccessToken(usuario, roles, permisos);
         var refreshTokenPlano = _tokenJwt.CrearRefreshToken();
@@ -108,12 +103,9 @@ public sealed class ServicioAuth : IServicioAuth
             .FirstOrDefaultAsync(x => x.TokenHash == hash, ct);
 
         if (sesion is null || sesion.RevocadoUtc is not null || sesion.ExpiraUtc < DateTime.UtcNow)
-        {
             return Resultado<AuthResponse>.Fallo("Refresh token invalido");
-        }
 
         sesion.RevocadoUtc = DateTime.UtcNow;
-
         var usuario = sesion.UsuarioSistema!;
         var roles = usuario.Roles.Select(x => x.RolSistema!.Codigo).Distinct().ToArray();
         var permisos = usuario.Roles.SelectMany(x => x.RolSistema!.Permisos).Select(x => x.PermisoSistema!.Codigo).Distinct().ToArray();
@@ -130,7 +122,6 @@ public sealed class ServicioAuth : IServicioAuth
         });
 
         await _contexto.SaveChangesAsync(ct);
-
         return Resultado<AuthResponse>.Ok(new AuthResponse(accessToken, nuevoRefreshPlano,
             DateTime.UtcNow.AddMinutes(_opcionesJwt.MinutosExpiracionAccessToken), usuario.NombreCompleto, roles, permisos));
     }
@@ -139,10 +130,61 @@ public sealed class ServicioAuth : IServicioAuth
     {
         var hash = _hash.CalcularSha256(refreshToken);
         var sesion = await _contexto.RefreshTokensSesiones.FirstOrDefaultAsync(x => x.TokenHash == hash, ct);
-        if (sesion is not null)
-        {
+        if (sesion is null) return;
+        sesion.RevocadoUtc = DateTime.UtcNow;
+        await _contexto.SaveChangesAsync(ct);
+    }
+
+    public async Task RevocarSesionesUsuarioAsync(Guid usuarioId, CancellationToken ct)
+    {
+        var sesiones = await _contexto.RefreshTokensSesiones.Where(x => x.UsuarioSistemaId == usuarioId && x.RevocadoUtc == null).ToListAsync(ct);
+        foreach (var sesion in sesiones)
             sesion.RevocadoUtc = DateTime.UtcNow;
-            await _contexto.SaveChangesAsync(ct);
-        }
+        await _contexto.SaveChangesAsync(ct);
+    }
+
+    public async Task SolicitarRecuperoClaveAsync(string email, CancellationToken ct)
+    {
+        var usuario = await _contexto.Usuarios.FirstOrDefaultAsync(x => x.Email == email && x.Activo, ct);
+        if (usuario is null) return;
+
+        var tokenPlano = _tokenJwt.CrearRefreshToken();
+        _contexto.TokensRecuperoClaves.Add(new TokenRecuperoClave
+        {
+            UsuarioSistemaId = usuario.Id,
+            TokenHash = _hash.CalcularSha256(tokenPlano),
+            ExpiraUtc = DateTime.UtcNow.AddMinutes(30),
+            CreadoPor = usuario.Email
+        });
+
+        _contexto.RegistrosAuditoria.Add(new RegistroAuditoria
+        {
+            Modulo = "seguridad",
+            Accion = "solicitar-recupero-clave",
+            Usuario = usuario.Email,
+            Entidad = "usuario",
+            DetalleJson = $"{{\"tokenRecupero\":\"{tokenPlano}\"}}"
+        });
+
+        await _contexto.SaveChangesAsync(ct);
+    }
+
+    public async Task<bool> ConfirmarRecuperoClaveAsync(string token, string nuevaClave, CancellationToken ct)
+    {
+        var hashToken = _hash.CalcularSha256(token);
+        var recupero = await _contexto.TokensRecuperoClaves.FirstOrDefaultAsync(x => x.TokenHash == hashToken, ct);
+        if (recupero is null || recupero.UsadoUtc != null || recupero.ExpiraUtc < DateTime.UtcNow)
+            return false;
+
+        var usuario = await _contexto.Usuarios.FirstAsync(x => x.Id == recupero.UsuarioSistemaId, ct);
+        var (hash, salt) = _hash.GenerarHash(nuevaClave);
+        usuario.ClaveHash = hash;
+        usuario.ClaveSalt = salt;
+        usuario.RequiereCambioClave = false;
+        recupero.UsadoUtc = DateTime.UtcNow;
+
+        await RevocarSesionesUsuarioAsync(usuario.Id, ct);
+        await _contexto.SaveChangesAsync(ct);
+        return true;
     }
 }

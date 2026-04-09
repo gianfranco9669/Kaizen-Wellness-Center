@@ -40,3 +40,7 @@ button { background: var(--color-primario); color: #052e16; font-weight: 700; }
   .menu { position: sticky; top: 0; z-index: 5; }
   .barra-clientes { grid-template-columns: 1fr; }
 }
+
+.acciones-inline { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.acciones-inline button { width: auto; min-width: 180px; }
+textarea { min-height: 80px; }

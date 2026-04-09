@@ -1,24 +1,38 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ServicioClientes, ClienteResumen } from './servicio-clientes';
 
 @Component({
   selector: 'app-lista-clientes',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   template: `
   <h1>Clientes</h1>
-  <div class="barra-clientes">
-    <input [(ngModel)]="busqueda" placeholder="Buscar por nombre, documento o telefono" />
-    <select [(ngModel)]="estado">
+  <form [formGroup]="formFiltro" class="barra-clientes" (ngSubmit)="cargar()">
+    <input formControlName="busqueda" placeholder="Buscar por nombre, documento o telefono" />
+    <select formControlName="estado">
       <option value="">Todos</option>
       <option value="activo">Activos</option>
       <option value="inactivo">Inactivos</option>
     </select>
-    <button (click)="cargar()">Buscar</button>
-  </div>
+    <button type="submit">Buscar</button>
+  </form>
+
+  <section class="tarjeta">
+    <h3>Alta rapida</h3>
+    <form [formGroup]="formAlta" (ngSubmit)="crear()">
+      <div class="grid-kpi">
+        <input formControlName="nombres" placeholder="Nombres" />
+        <input formControlName="apellidos" placeholder="Apellidos" />
+        <input formControlName="documento" placeholder="Documento" />
+        <input formControlName="telefono" placeholder="Telefono" />
+        <input formControlName="email" placeholder="Email" />
+        <button [disabled]="formAlta.invalid">Crear cliente</button>
+      </div>
+    </form>
+  </section>
 
   <table class="tabla">
     <thead><tr><th>Codigo</th><th>Nombre</th><th>Documento</th><th>Telefono</th><th>VIP</th><th>Saldo</th><th></th></tr></thead>
@@ -36,13 +50,45 @@ import { ServicioClientes, ClienteResumen } from './servicio-clientes';
   </table>`
 })
 export class ListaClientesComponent implements OnInit {
-  busqueda = '';
-  estado = '';
   clientes: ClienteResumen[] = [];
 
-  constructor(private readonly servicio: ServicioClientes) {}
+  formFiltro = this.fb.group({
+    busqueda: [''],
+    estado: ['']
+  });
+
+  formAlta = this.fb.group({
+    nombres: ['', Validators.required],
+    apellidos: ['', Validators.required],
+    documento: ['', Validators.required],
+    telefono: ['', Validators.required],
+    email: ['', [Validators.required, Validators.email]]
+  });
+
+  constructor(private readonly fb: FormBuilder, private readonly servicio: ServicioClientes) {}
+
   ngOnInit(): void { this.cargar(); }
+
   cargar(): void {
-    this.servicio.listar(this.busqueda, this.estado).subscribe(data => this.clientes = data);
+    const raw = this.formFiltro.getRawValue();
+    this.servicio.listar(raw.busqueda ?? '', raw.estado ?? '').subscribe(data => this.clientes = data);
+  }
+
+  crear(): void {
+    if (this.formAlta.invalid) return;
+    const raw = this.formAlta.getRawValue();
+    this.servicio.crear({
+      nombres: raw.nombres ?? '',
+      apellidos: raw.apellidos ?? '',
+      documento: raw.documento ?? '',
+      telefono: raw.telefono ?? '',
+      email: raw.email ?? '',
+      esVip: false,
+      restriccionesAlimentarias: '',
+      notasInternas: ''
+    }).subscribe(() => {
+      this.formAlta.reset();
+      this.cargar();
+    });
   }
 }

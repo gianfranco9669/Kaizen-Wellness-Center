@@ -34,6 +34,32 @@ public sealed class AuthController : ControllerBase
     }
 
     [Authorize]
+    [HttpPost("revocar-sesiones")]
+    public async Task<IActionResult> RevocarSesiones([FromServices] IServicioAuth servicio, CancellationToken ct)
+    {
+        var usuarioId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
+        if (!Guid.TryParse(usuarioId, out var idUsuario)) return BadRequest(new { mensaje = "Usuario invalido" });
+        await servicio.RevocarSesionesUsuarioAsync(idUsuario, ct);
+        return NoContent();
+    }
+
+    [AllowAnonymous]
+    [HttpPost("solicitar-recupero-clave")]
+    public async Task<IActionResult> SolicitarRecuperoClave([FromServices] IServicioAuth servicio, [FromBody] SolicitarRecuperoClaveRequest request, CancellationToken ct)
+    {
+        await servicio.SolicitarRecuperoClaveAsync(request.Email, ct);
+        return Accepted(new { mensaje = "Si el usuario existe recibira instrucciones" });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("confirmar-recupero-clave")]
+    public async Task<IActionResult> ConfirmarRecuperoClave([FromServices] IServicioAuth servicio, [FromBody] ConfirmarRecuperoClaveRequest request, CancellationToken ct)
+    {
+        var ok = await servicio.ConfirmarRecuperoClaveAsync(request.Token, request.NuevaClave, ct);
+        return ok ? Ok(new { mensaje = "Clave actualizada" }) : BadRequest(new { mensaje = "Token invalido o expirado" });
+    }
+
+    [Authorize]
     [HttpGet("me")]
     public IActionResult Me() => Ok(new
     {

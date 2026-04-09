@@ -1,27 +1,32 @@
 # README funcional
 
-## Experiencias de uso
-- Panel administrativo: dashboard, clientes, monitoreo operativo.
-- Punto de venta: base de operacion gastronomica.
-- Cocina: vista de estado de pedidos.
-- Recepcion gimnasio: control de acceso y check-in.
-- Portal socio: estado de plan y accesos.
+## Operacion actual cubierta
 
-## Modulo clientes (operativo/comercial)
-- Ficha integral del cliente.
-- Estados activo/inactivo y baja logica.
-- Segmentacion VIP.
-- Restricciones alimentarias y notas internas.
-- Saldo de cuenta.
-- Base para historiales de pedidos, pagos, membresias y asistencia.
-
-## Integraciones
-- Recepcion de webhooks con idempotencia.
-- Estados de sincronizacion y reintentos por job.
-- Clientes HTTP desacoplados para PedidosYa, Rappi y MercadoPago.
-
-## Seguridad
-- Login + refresh token.
+### Seguridad
+- Login y refresh token.
+- Revocacion de sesiones.
+- Recupero de clave (solicitud y confirmacion).
 - Bloqueo temporal por intentos fallidos.
-- Endpoints protegidos con JWT.
-- Politicas por permisos para acciones sensibles.
+
+### Clientes
+- Alta, listado, busqueda, filtros, detalle, edicion y baja logica.
+- Campos CRM operativos: estado, VIP, restricciones, notas y saldo.
+- Auditoria de cambios.
+
+### Gastronomia
+- Alta de pedido con detalle real.
+- Cambio de estados para cocina.
+- Registro de pagos.
+- Consumo de stock por venta.
+- Registro de mermas por cancelacion.
+
+### Gimnasio
+- Alta/listado/consulta de socios.
+- Alta y renovacion de membresias.
+- Generacion de QR firmado.
+- Check-in validando QR, vencimiento y estado.
+- Historial de accesos.
+
+### Integraciones
+- Recepcion de webhooks con idempotencia.
+- Persistencia y procesamiento asincrono por job.

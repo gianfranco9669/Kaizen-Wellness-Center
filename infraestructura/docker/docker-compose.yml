@@ -2,10 +2,12 @@ version: '3.9'
 services:
   postgres:
     image: postgres:16
+    env_file:
+      - .env
     environment:
-      POSTGRES_DB: kaizen_wellness
-      POSTGRES_USER: kaizen
-      POSTGRES_PASSWORD: kaizen123
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - '5432:5432'
     volumes:
@@ -13,6 +15,9 @@ services:
 
   redis:
     image: redis:7
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    env_file:
+      - .env
     ports:
       - '6379:6379'
 
@@ -20,14 +25,17 @@ services:
     build:
       context: ../../
       dockerfile: infraestructura/docker/Dockerfile.api
+    env_file:
+      - .env
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__PostgreSql: Host=postgres;Port=5432;Database=kaizen_wellness;Username=kaizen;Password=kaizen123
-      ConnectionStrings__Redis: redis:6379
-      Jwt__Issuer: kaizen-wellness-api
-      Jwt__Audience: kaizen-wellness-front
-      Jwt__ClaveSecreta: CLAVE_JWT_MUY_SEGURA_DE_32_CARACTERES_MINIMO_1234
-      Cors__OrigenesPermitidos__0: http://localhost:4200
+      ConnectionStrings__PostgreSql: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__Redis: redis:6379,password=${REDIS_PASSWORD}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Jwt__ClaveSecreta: ${JWT_CLAVE_SECRETA}
+      Qr__ClaveSecreta: ${QR_CLAVE_SECRETA}
+      Cors__OrigenesPermitidos__0: ${CORS_ORIGEN}
     ports:
       - '8080:8080'
     depends_on:
@@ -38,6 +46,8 @@ services:
     build:
       context: ../../
       dockerfile: infraestructura/docker/Dockerfile.frontend
+    env_file:
+      - .env
     ports:
       - '4200:80'
     depends_on:

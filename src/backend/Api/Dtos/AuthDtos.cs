@@ -15,3 +15,6 @@ public sealed record AuthResponse(
     string NombreUsuario,
     IReadOnlyCollection<string> Roles,
     IReadOnlyCollection<string> Permisos);
+
+public sealed record SolicitarRecuperoClaveRequest([property: Required, EmailAddress] string Email);
+public sealed record ConfirmarRecuperoClaveRequest([property: Required] string Token, [property: Required, MinLength(8)] string NuevaClave);

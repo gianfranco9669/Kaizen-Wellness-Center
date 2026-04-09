@@ -73,6 +73,14 @@ public sealed class RefreshTokenSesion : EntidadBase
     public string? IpCreacion { get; set; }
 }
 
+
+public sealed class TokenRecuperoClave : EntidadBase
+{
+    public Guid UsuarioSistemaId { get; set; }
+    public string TokenHash { get; set; } = string.Empty;
+    public DateTime ExpiraUtc { get; set; }
+    public DateTime? UsadoUtc { get; set; }
+}
 public sealed class Cliente : EntidadBase
 {
     public Guid EmpresaId { get; set; }
