@@ -1,0 +1,20 @@
+:root {
+  --color-fondo: #0f172a;
+  --color-panel: #111827;
+  --color-primario: #22c55e;
+  --color-texto: #e5e7eb;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, Arial, sans-serif;
+  background: linear-gradient(180deg, #020617 0%, #0f172a 100%);
+  color: var(--color-texto);
+}
+
+.tarjeta {
+  background: rgba(17, 24, 39, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  padding: 1rem;
+}

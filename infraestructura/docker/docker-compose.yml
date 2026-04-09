@@ -1,0 +1,37 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: kaizen_wellness
+      POSTGRES_USER: kaizen
+      POSTGRES_PASSWORD: kaizen123
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports:
+      - '6379:6379'
+
+  api:
+    build:
+      context: ../../
+      dockerfile: infraestructura/docker/Dockerfile.api
+    ports:
+      - '8080:8080'
+    depends_on:
+      - postgres
+      - redis
+
+  frontend:
+    build:
+      context: ../../
+      dockerfile: infraestructura/docker/Dockerfile.frontend
+    ports:
+      - '4200:80'
+
+volumes:
+  postgres_data:

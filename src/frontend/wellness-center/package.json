@@ -1,0 +1,10 @@
+{
+  "name": "wellness-center",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "echo 'Instalar angular cli y ejecutar ng serve'",
+    "build": "echo 'Instalar angular cli y ejecutar ng build'",
+    "test": "echo 'Pendiente de configurar pruebas frontend'"
+  }
+}
