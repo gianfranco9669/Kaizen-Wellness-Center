@@ -1,4 +1,10 @@
-export class AppComponent {
-  titulo = 'Kaizen Wellness Center';
-  subtitulo = 'Plataforma operativa premium para gastronomia + gimnasio';
-}
+import { Component } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
+
+@Component({
+  selector: 'app-raiz',
+  standalone: true,
+  imports: [RouterOutlet],
+  template: '<router-outlet />'
+})
+export class AppComponent {}

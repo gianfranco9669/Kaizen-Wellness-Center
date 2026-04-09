@@ -20,6 +20,14 @@ services:
     build:
       context: ../../
       dockerfile: infraestructura/docker/Dockerfile.api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__PostgreSql: Host=postgres;Port=5432;Database=kaizen_wellness;Username=kaizen;Password=kaizen123
+      ConnectionStrings__Redis: redis:6379
+      Jwt__Issuer: kaizen-wellness-api
+      Jwt__Audience: kaizen-wellness-front
+      Jwt__ClaveSecreta: CLAVE_JWT_MUY_SEGURA_DE_32_CARACTERES_MINIMO_1234
+      Cors__OrigenesPermitidos__0: http://localhost:4200
     ports:
       - '8080:8080'
     depends_on:
@@ -32,6 +40,8 @@ services:
       dockerfile: infraestructura/docker/Dockerfile.frontend
     ports:
       - '4200:80'
+    depends_on:
+      - api
 
 volumes:
   postgres_data:

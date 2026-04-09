@@ -1,21 +1,27 @@
 # README funcional
 
-## Unidades de negocio
-- Gastronomia: POS, cocina, delivery, promociones.
-- Gimnasio: socios, membresias, acceso QR, recepcion.
-- Expansiones: yoga, estetica, turnos, reservas, retail.
+## Experiencias de uso
+- Panel administrativo: dashboard, clientes, monitoreo operativo.
+- Punto de venta: base de operacion gastronomica.
+- Cocina: vista de estado de pedidos.
+- Recepcion gimnasio: control de acceso y check-in.
+- Portal socio: estado de plan y accesos.
 
-## Roles objetivo
-- Administrador general
-- Gerencia financiera
-- Encargado de sede
-- Cajero
-- Operador cocina
-- Recepcion gimnasio
-- Socio (portal/app)
+## Modulo clientes (operativo/comercial)
+- Ficha integral del cliente.
+- Estados activo/inactivo y baja logica.
+- Segmentacion VIP.
+- Restricciones alimentarias y notas internas.
+- Saldo de cuenta.
+- Base para historiales de pedidos, pagos, membresias y asistencia.
 
-## Flujos iniciales disponibles en base
-1. Login de usuario operativo.
-2. Alta y consulta de clientes.
-3. Emision de eventos en hub de cocina.
-4. Semilla de empresa/sede/cliente para boot rapido.
+## Integraciones
+- Recepcion de webhooks con idempotencia.
+- Estados de sincronizacion y reintentos por job.
+- Clientes HTTP desacoplados para PedidosYa, Rappi y MercadoPago.
+
+## Seguridad
+- Login + refresh token.
+- Bloqueo temporal por intentos fallidos.
+- Endpoints protegidos con JWT.
+- Politicas por permisos para acciones sensibles.

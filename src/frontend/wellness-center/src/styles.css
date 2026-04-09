@@ -1,20 +1,42 @@
 :root {
-  --color-fondo: #0f172a;
+  --color-fondo: #0b1220;
   --color-panel: #111827;
+  --color-borde: #334155;
   --color-primario: #22c55e;
-  --color-texto: #e5e7eb;
+  --color-texto: #e2e8f0;
 }
 
+* { box-sizing: border-box; }
 body {
   margin: 0;
   font-family: Inter, Arial, sans-serif;
-  background: linear-gradient(180deg, #020617 0%, #0f172a 100%);
+  background: radial-gradient(circle at top, #111827 0%, #020617 70%);
   color: var(--color-texto);
 }
 
-.tarjeta {
-  background: rgba(17, 24, 39, 0.85);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 12px;
-  padding: 1rem;
+h1, h2, h3 { margin-top: 0; }
+
+.layout { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+.menu { padding: 20px; background: #020617; border-right: 1px solid var(--color-borde); display: flex; flex-direction: column; gap: 10px; }
+.menu a, .menu button { color: var(--color-texto); text-decoration: none; background: #1e293b; border: 1px solid var(--color-borde); border-radius: 8px; padding: 10px; cursor: pointer; text-align: left; }
+.contenido { padding: 24px; }
+
+.tarjeta { background: rgba(17, 24, 39, 0.9); border: 1px solid var(--color-borde); border-radius: 12px; padding: 16px; }
+.grid-kpi { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+.contenedor-login { min-height: 100vh; display: grid; place-items: center; }
+.tarjeta-login { width: 100%; max-width: 420px; background: var(--color-panel); border: 1px solid var(--color-borde); border-radius: 16px; padding: 24px; }
+input, select, textarea, button { width: 100%; margin: 4px 0 12px; padding: 10px; border-radius: 8px; border: 1px solid var(--color-borde); background: #0f172a; color: var(--color-texto); }
+button { background: var(--color-primario); color: #052e16; font-weight: 700; }
+
+.tabla { width: 100%; border-collapse: collapse; }
+.tabla th, .tabla td { border-bottom: 1px solid var(--color-borde); padding: 10px; text-align: left; }
+.barra-clientes { display: grid; grid-template-columns: 1fr 180px 120px; gap: 10px; margin-bottom: 16px; }
+.form-cliente { max-width: 700px; }
+.error { color: #fb7185; }
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+  .menu { position: sticky; top: 0; z-index: 5; }
+  .barra-clientes { grid-template-columns: 1fr; }
 }

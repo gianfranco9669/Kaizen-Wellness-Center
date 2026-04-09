@@ -1,34 +1,63 @@
 # Kaizen Wellness Center
 
-Plataforma premium para operar un wellness center multiunidad (gastronomia + gimnasio + crecimiento futuro) con monolito modular robusto.
+Base productiva para monolito modular (gastronomia + gimnasio) con ASP.NET Core, Angular, PostgreSQL, Redis, SignalR y Hangfire.
 
-## Etapas implementadas en esta base
-- Etapa 1: arquitectura, estructura de carpetas, modelado inicial.
-- Etapa 2: backend base ASP.NET Core, PostgreSQL, Redis, SignalR, jobs.
-- Etapa 3: frontend base Angular (estructura y pantallas semilla).
-- Etapa 4-6: esqueletos de modulos para evolucion incremental.
-- Etapa 7: documentacion y checklist de produccion inicial.
+## Requisitos locales
+- .NET SDK 8
+- Node.js 20+
+- Docker + docker-compose
 
 ## Estructura
-- `src/backend`: solucion .NET con API, comunes y modulos.
-- `src/frontend/wellness-center`: base frontend Angular y experiencia UX inicial.
-- `infraestructura/docker`: contenedores para despliegue local/entornos.
-- `docs`: decisiones tecnicas y arquitectura.
+- `src/backend`: API, dominio base y modulos de negocio.
+- `src/frontend/wellness-center`: Angular real (standalone components, rutas, guard, interceptor).
+- `infraestructura/docker`: despliegue local con postgres + redis + api + frontend.
+- `docs`: arquitectura funcional y tecnica.
 
-## Backend destacado
-- Autenticacion base con login y bloqueo por intentos fallidos.
-- CRM de clientes inicial con auditoria y estados.
-- Preparado para SignalR (cocina), Redis y Hangfire.
-- Migracion SQL inicial y semilla de datos empresariales.
+## Backend
+1. `cd src/backend/Api`
+2. `dotnet restore`
+3. `dotnet build`
+4. `dotnet run`
 
-## Frontend destacado
-- Shell inicial con experiencias: admin, punto de venta, cocina, recepcion gimnasio y portal socio.
-- Textos en castellano, nomenclatura sin tildes ni letra enie en codigo.
+### Credenciales semilla
+- usuario: `admin@kaizen.local`
+- clave inicial: `Cambiar123*`
 
-## Checklist de produccion (inicial)
-- [ ] JWT real con firma segura y refresh token persistente.
-- [ ] Integrar Identity + 2FA.
-- [ ] Endurecer politicas CORS por entorno.
-- [ ] CI/CD con pruebas automatizadas.
-- [ ] Observabilidad OpenTelemetry + panel centralizado.
-- [ ] Integraciones reales con Mercado Pago, PedidosYa y Rappi.
+### Endpoints base
+- Swagger: `http://localhost:8080/swagger`
+- Health: `http://localhost:8080/health`
+- Hangfire: `http://localhost:8080/hangfire`
+- Login: `POST /api/seguridad/auth/login`
+
+## Frontend
+1. `cd src/frontend/wellness-center`
+2. `npm install`
+3. `npm run start`
+4. `npm run build`
+
+## Docker
+Desde `infraestructura/docker`:
+1. `docker compose up --build`
+2. API en `http://localhost:8080`
+3. Frontend en `http://localhost:4200`
+
+## Seguridad implementada
+- JWT real firmado con clave simetrica.
+- Refresh token persistido y revocable.
+- Bloqueo temporal por intentos fallidos.
+- Roles y permisos con politicas de autorizacion.
+- Middleware global de errores y trazabilidad en auditoria.
+
+## Modulo clientes implementado
+- listado con busqueda y filtros
+- alta
+- detalle
+- edicion
+- baja logica
+- campos operativos: estado, VIP, restricciones, notas, saldo
+- auditoria de alta/edicion/baja
+
+## Cobertura funcional base
+- Gastronomia: categorias, productos, pedidos, detalle_pedidos, pagos, stock, mermas, endpoint POS/cocina.
+- Gimnasio: socios, membresias, historial de accesos, endpoint recepcion y check-in.
+- Integraciones: webhooks con idempotencia + clientes HTTP (PedidosYa, Rappi, MercadoPago) + job de procesamiento.

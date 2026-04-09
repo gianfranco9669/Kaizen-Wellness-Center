@@ -1,12 +1,27 @@
+using System.Security.Claims;
+using System.Text;
+using Api.Configuracion;
 using Api.Datos;
 using Api.Hubs;
 using Api.Jobs;
+using Api.Middleware;
+using Api.Seguridad;
 using Api.Servicios;
 using Hangfire;
+using Hangfire.PostgreSql;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.Configure<OpcionesJwt>(builder.Configuration.GetSection(OpcionesJwt.Seccion));
+var opcionesJwt = builder.Configuration.GetSection(OpcionesJwt.Seccion).Get<OpcionesJwt>() ?? new OpcionesJwt();
+if (string.IsNullOrWhiteSpace(opcionesJwt.ClaveSecreta) || opcionesJwt.ClaveSecreta.Length < 32)
+{
+    throw new InvalidOperationException("Jwt:ClaveSecreta debe estar configurada con al menos 32 caracteres");
+}
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -17,14 +32,47 @@ builder.Services.AddDbContext<ContextoWellness>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PostgreSql")));
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
-    ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379"));
+    ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")!));
 
 builder.Services.AddScoped<IServicioAuth, ServicioAuth>();
 builder.Services.AddScoped<IServicioClientes, ServicioClientes>();
-builder.Services.AddScoped<IClienteExternoPedidosYa, ClienteExternoPedidosYaMock>();
+builder.Services.AddScoped<IServicioHashClave, ServicioHashClave>();
+builder.Services.AddScoped<IServicioTokenJwt, ServicioTokenJwt>();
+builder.Services.AddScoped<IClienteExternoPedidosYa, ClienteExternoPedidosYa>();
+builder.Services.AddScoped<IClienteExternoRappi, ClienteExternoRappi>();
+builder.Services.AddScoped<IClienteExternoMercadoPago, ClienteExternoMercadoPago>();
 builder.Services.AddScoped<JobSincronizacionIntegraciones>();
+builder.Services.AddScoped<IServicioProcesadorWebhooks, ServicioProcesadorWebhooks>();
 
-builder.Services.AddHangfire(config => config.UseSimpleAssemblyNameTypeSerializer());
+builder.Services.AddHttpClient("pedidosya", c => { var url = builder.Configuration["Integraciones:PedidosYa:BaseUrl"]; if (!string.IsNullOrWhiteSpace(url)) c.BaseAddress = new Uri(url); });
+builder.Services.AddHttpClient("rappi", c => { var url = builder.Configuration["Integraciones:Rappi:BaseUrl"]; if (!string.IsNullOrWhiteSpace(url)) c.BaseAddress = new Uri(url); });
+builder.Services.AddHttpClient("mercadopago", c => { var url = builder.Configuration["Integraciones:MercadoPago:BaseUrl"]; if (!string.IsNullOrWhiteSpace(url)) c.BaseAddress = new Uri(url); });
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = opcionesJwt.Issuer,
+            ValidateAudience = true,
+            ValidAudience = opcionesJwt.Audience,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(opcionesJwt.ClaveSecreta))
+        };
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("permiso:clientes.eliminar", policy =>
+        policy.RequireAssertion(ctx =>
+            ctx.User.HasClaim(c => c.Type == "permiso" && c.Value == "clientes.eliminar") ||
+            ctx.User.HasClaim(c => c.Type == ClaimTypes.Role && c.Value == "admin")));
+});
+
+builder.Services.AddHangfire(config =>
+    config.UsePostgreSqlStorage(c => c.UseNpgsqlConnection(builder.Configuration.GetConnectionString("PostgreSql"))));
 builder.Services.AddHangfireServer();
 
 builder.Services.AddHealthChecks()
@@ -33,11 +81,8 @@ builder.Services.AddHealthChecks()
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("politica-front", policy => policy
-        .WithOrigins("http://localhost:4200")
-        .AllowAnyMethod()
-        .AllowAnyHeader()
-        .AllowCredentials());
+    var origenes = builder.Configuration.GetSection("Cors:OrigenesPermitidos").Get<string[]>() ?? ["http://localhost:4200"];
+    options.AddPolicy("politica-front", policy => policy.WithOrigins(origenes).AllowAnyMethod().AllowAnyHeader().AllowCredentials());
 });
 
 builder.Services.AddRateLimiter(options =>
@@ -45,11 +90,13 @@ builder.Services.AddRateLimiter(options =>
     options.AddFixedWindowLimiter("auth", opt =>
     {
         opt.Window = TimeSpan.FromMinutes(1);
-        opt.PermitLimit = 20;
+        opt.PermitLimit = 30;
     });
 });
 
 var app = builder.Build();
+
+app.UseMiddleware<MiddlewareErrores>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -59,21 +106,25 @@ if (app.Environment.IsDevelopment())
 
 app.UseRateLimiter();
 app.UseCors("politica-front");
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<CocinaHub>("/hubs/cocina");
 app.MapHealthChecks("/health");
+app.MapHangfireDashboard("/hangfire");
 
 using (var scope = app.Services.CreateScope())
 {
-    var sembrador = new SembradorInicial(scope.ServiceProvider.GetRequiredService<ContextoWellness>());
+    var contexto = scope.ServiceProvider.GetRequiredService<ContextoWellness>();
+    await contexto.Database.MigrateAsync();
+    var sembrador = new SembradorInicial(contexto, scope.ServiceProvider.GetRequiredService<IServicioHashClave>());
     await sembrador.SemillarAsync();
 }
 
 RecurringJob.AddOrUpdate<JobSincronizacionIntegraciones>(
     "sincronizacion-integraciones",
     x => x.EjecutarAsync(),
-    "*/10 * * * *");
+    "*/5 * * * *");
 
 app.Run();
