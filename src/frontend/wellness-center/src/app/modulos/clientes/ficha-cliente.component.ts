@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ServicioClientes } from './servicio-clientes';
+import { ClienteDetalle, ServicioClientes } from './servicio-clientes';
 
 @Component({
   selector: 'app-ficha-cliente',
@@ -25,7 +25,8 @@ import { ServicioClientes } from './servicio-clientes';
 })
 export class FichaClienteComponent implements OnInit {
   private clienteId = '';
-  formulario = this.fb.group({
+
+  formulario = this.fb.nonNullable.group({
     nombres: ['', Validators.required],
     apellidos: ['', Validators.required],
     telefono: ['', Validators.required],
@@ -45,12 +46,30 @@ export class FichaClienteComponent implements OnInit {
 
   ngOnInit(): void {
     this.clienteId = this.ruta.snapshot.paramMap.get('id') ?? '';
-    this.servicio.obtener(this.clienteId).subscribe(c => this.formulario.patchValue(c));
+    this.servicio.obtener(this.clienteId).subscribe(c => {
+      this.formulario.patchValue({
+        nombres: c.nombres,
+        apellidos: c.apellidos,
+        telefono: c.telefono,
+        email: c.email,
+        estado: c.estado,
+        esVip: c.esVip,
+        saldoCuenta: c.saldoCuenta,
+        restriccionesAlimentarias: c.restriccionesAlimentarias,
+        notasInternas: c.notasInternas
+      });
+    });
   }
 
   guardar(): void {
     if (this.formulario.invalid) return;
-    this.servicio.actualizar(this.clienteId, this.formulario.getRawValue()).subscribe();
+
+    const payload: Partial<ClienteDetalle> = {
+      ...this.formulario.getRawValue(),
+      saldoCuenta: Number(this.formulario.controls.saldoCuenta.value)
+    };
+
+    this.servicio.actualizar(this.clienteId, payload).subscribe();
   }
 
   eliminar(): void {
